@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Design Visualization</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-image: url(image/bg.jpg);
+            background-size: cover;
+            font-family: 'Arial', sans-serif;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: rgb(255, 255, 255);
+            margin-bottom: 20px;
+            transform: translateX(-4vw);
+        }
+        .container {
+            display: flex;
+            align-items: center;
+        }
+        canvas {
+            border: 8px solid gray;
+            margin-right: 20px;
+        }
+        img {
+            display: none;
+        }
+        button {
+            width: 3cm;
+            height: 2cm;
+            font-size: 1em;
+            background-color: #dd868c;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        button:hover {
+            background-color: #e06e76;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>ִֶָ𓂃 ࣪ IKN CITY DESIGN 🐇་༘࿐</h1>
+    <div class="container"> 
+        <canvas id="viewport" width="550" height="550"></canvas>
+        <button id="restartBtn">REDESIGN</button>
+    </div>
+    <img src="image/building big.png" id="building">
+    <img src="image/rumput.jpeg" id="background">
+    <script>
+        class Tree {
+            constructor(leaf) {
+                this.leaf = leaf;
+                this.lchild = undefined;
+                this.rchild = undefined;
+            }
+
+            getLeafs() {
+                if (this.lchild === undefined && this.rchild === undefined)
+                    return [this.leaf];
+                else
+                    return [].concat(this.lchild.getLeafs(), this.rchild.getLeafs());
+            }
+
+            paint(c) {
+                this.leaf.paint(c);
+                if (this.lchild !== undefined) this.lchild.paint(c);
+                if (this.rchild !== undefined) this.rchild.paint(c);
+            }
+        }
+
+        class Point {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+            }
+        }
+
+        function random(min, max) {
+            return Math.floor(Math.random() * (max - min + 1) + min);
+        }
+
+        class Container {
+            constructor(x, y, w, h) {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.h = h;
+                this.center = new Point(this.x + (this.w / 2), this.y + (this.h / 2));
+                this.topLeft = [this.x + 5, this.y + 5];
+            }
+
+            paint(c, building, house) {
+                // Gambar latar belakang
+                const backgroundImage = new Image();
+                backgroundImage.src = "image/rumput.jpeg";
+                c.drawImage(backgroundImage, this.x * SQUARE, this.y * SQUARE, this.w * SQUARE, this.h * SQUARE);
+
+                // Gambar bangunan
+                const buildingX = this.x * SQUARE + 10; // Memberi jarak dari batas kontainer
+                const buildingY = this.y * SQUARE + 10;
+
+                // Pastikan bangunan tidak keluar dari batas container
+                const maxBuildingWidth = this.w * SQUARE - 20;
+                const maxBuildingHeight = this.h * SQUARE - 20;
+                const buildingWidth = Math.min(building.width, maxBuildingWidth);
+                const buildingHeight = Math.min(building.height, maxBuildingHeight);
+
+                c.drawImage(building.img, buildingX, buildingY, buildingWidth, buildingHeight);
+
+                // Gambar rumah
+                const houseX = buildingX + buildingWidth + 10; // Memberi jarak dari bangunan
+                const houseY = buildingY;
+
+                // Pastikan rumah tidak keluar dari batas container
+                const maxHouseWidth = this.w * SQUARE - 20 - buildingWidth - 10;
+                const maxHouseHeight = this.h * SQUARE - 20;
+                const houseWidth = Math.min(house.width, maxHouseWidth);
+                const houseHeight = Math.min(house.height, maxHouseHeight);
+
+                c.drawImage(house.img, houseX, houseY, houseWidth, houseHeight);
+
+                // Gambar batas kontainer
+                c.strokeStyle = "gray";
+                c.lineWidth = 2;
+                c.strokeRect(this.x * SQUARE, this.y * SQUARE, this.w * SQUARE, this.h * SQUARE);
+
+                c.strokeStyle = "gray";
+                c.lineWidth = 16;
+                c.strokeRect(this.x * SQUARE, this.y * SQUARE, this.w * SQUARE, this.h * SQUARE);
+
+                c.strokeStyle = "yellow";
+                c.lineWidth = 2;
+                c.strokeRect(this.x * SQUARE, this.y * SQUARE, this.w * SQUARE, this.h * SQUARE);
+
+                c.fillStyle = "gray";
+                c.fillRect(this.x * SQUARE - 8, this.y * SQUARE - 8, 16, 16);
+                c.fillRect(this.x * SQUARE - 8 + this.w * SQUARE, this.y * SQUARE - 8, 16, 16);
+                c.fillRect(this.x * SQUARE - 8, this.y * SQUARE - 8 + this.h * SQUARE, 16, 16);
+                c.fillRect(this.x * SQUARE - 8 + this.w * SQUARE, this.y * SQUARE - 8 + this.h * SQUARE, 16, 16);
+            }
+        }
+
+        function split_container(container, iter) {
+            const root = new Tree(container);
+            if (iter !== 0) {
+                const sr = random_split(container);
+                root.lchild = split_container(sr[0], iter - 1);
+                root.rchild = split_container(sr[1], iter - 1);
+            }
+            return root;
+        }
+
+        function random_split(container) {
+            let r1, r2;
+            if (random(0, 1) === 0) {
+                r1 = new Container(container.x, container.y, random(1, container.w), container.h);
+                r2 = new Container(container.x + r1.w, container.y, container.w - r1.w, container.h);
+
+                if (DISCARD_BY_RATIO) {
+                    const r1_w_ratio = r1.w / r1.h;
+                    const r2_w_ratio = r2.w / r2.h;
+                    if (r1_w_ratio < W_RATIO || r2_w_ratio < W_RATIO) {
+                        return random_split(container);
+                    }
+                }
+            } else {
+                r1 = new Container(container.x, container.y, container.w, random(1, container.h));
+                r2 = new Container(container.x, container.y + r1.h, container.w, container.h - r1.h);
+
+                if (DISCARD_BY_RATIO) {
+                    const r1_h_ratio = r1.h / r1.w;
+                    const r2_h_ratio = r2.h / r2.w;
+                    if (r1_h_ratio < H_RATIO || r2_h_ratio < H_RATIO) {
+                        return random_split(container);
+                    }
+                }
+            }
+            return [r1, r2];
+        }
+
+        const canvas = document.getElementById('viewport');
+        const MAP_SIZE = 150;
+        const SQUARE = canvas.width / MAP_SIZE;
+        const N_ITERATIONS = 4;
+        const DISCARD_BY_RATIO = true;
+        const H_RATIO = 0.5;
+        const W_RATIO = 0.5;
+        const c_context = canvas.getContext('2d');
+
+        const bangunan = new Image();
+        bangunan.src = "image/building big.png";
+
+        const bangunan_med = new Image();
+        bangunan_med.src = "image/building med.png";
+
+        const bangunan_small = new Image();
+        bangunan_small.src = "image/building small.png";
+
+        const bangunan_house = new Image();
+        bangunan_house.src = "image/house.png";
+
+        const buildings = [
+            { img: bangunan, width: 50, height: 70, count: 1 },
+            { img: bangunan_med, width: 50, height: 40, count: 5 },
+            { img: bangunan_small, width: 40, height: 40, count: 10 }
+        ];
+
+        const houses = [
+            { img: bangunan_house, width: 30, height: 25, count: 16 }
+        ];
+
+        let buildingQueue = [];
+        buildings.forEach(building => {
+            for (let i = 0; i < building.count; i++) {
+                buildingQueue.push(building);
+            }
+        });
+
+        let houseQueue = [];
+        houses.forEach(house => {
+            for (let i = 0; i < house.count; i++) {
+                houseQueue.push(house);
+            }
+        });
+
+        function paintCity() {
+            const main_container = new Container(0, 0, MAP_SIZE, MAP_SIZE);
+            const container_tree = split_container(main_container, N_ITERATIONS);
+
+            c_context.fillStyle = "#252";
+            c_context.fillRect(0, 0, canvas.width, canvas.height);
+
+            const leafs = container_tree.getLeafs();
+            leafs.forEach((leaf, index) => {
+                if (buildingQueue[index] && houseQueue[index]) {
+                    leaf.paint(c_context, buildingQueue[index], houseQueue[index]);
+                }
+            });
+        }
+
+        let imagesLoaded = 0;
+        function imageLoaded() {
+            imagesLoaded++;
+            if (imagesLoaded === buildings.length + houses.length) {
+                paintCity();
+            }
+        }
+
+        bangunan.onload = bangunan_med.onload = bangunan_small.onload = bangunan_house.onload = imageLoaded;
+
+        const restartBtn = document.getElementById('restartBtn');
+        restartBtn.addEventListener('click', function() {
+            location.reload();
+        });
+    </script>
+</body>
+</html>
